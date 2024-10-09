@@ -4,10 +4,11 @@ title = "Calenzana - Ortu"
 gps = "GR20_j1.png"
 denivele = "1 570"
 duree = "4:17:20"
-draft = true
+draft = "true"
 distance = "13173"
-duration = "5:11:27"
+elevation = "1644"
 date = "2024-09-02 14:57:16.816572"
+duration = "5:11:27"
 +++
 
 ### A la loupiotte

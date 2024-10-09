@@ -1,7 +1,12 @@
 +++
+speed = "2.0871124"
 title = "Pietra Piana - Vizzavona"
-date = 2024-09-10 10:47:09.270221
-draft = true
+gps = "GR20_j6.png"
+draft = "true"
+distance = "19380"
+elevation = "1378"
+duration = "9:17:08"
+date = "2024-09-10 10:47:09.270221"
 +++
 ### Et la lumière fut 
 Nous essayons ce matin de nous lever encore un peu plus tôt qu'à l'accoutumée, vers 4h. La préparation est efficace, à 4h45 nous sommes déjà en route. Pas de chance, après seulement quelques dizaines de mètres, je me trompe de route et nous embarque sur le chemin des crêtes au lieu de la tranquille sente de la vallée. Nous passons cependant tranquillement les pics de pierres décharnés, en croisant sur notre route des troupeaux de bovins quelque peu endormis.

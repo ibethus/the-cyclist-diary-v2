@@ -2,10 +2,11 @@
 speed = "2.0874372"
 title = "Ortu - Asco"
 gps = "gr20-J2.png"
-draft = true
+draft = "true"
 distance = "18319"
-duration = "8:46:33"
+elevation = "1680"
 date = "2024-09-02 17:16:30.274392"
+duration = "8:46:33"
 +++
 ### No pasarán
 Le gardien du refuge a été clair hier : ne passez pas par les crêtes, de l'orage est prévu pour toute la journée. Dommage pour nous car nous voulions profiter du paysage. Raisonnables, nous partons donc vers Bonifatu, par une variante qui permet de rattraper le refuge de Carozzu sans passer par les hauteurs. 

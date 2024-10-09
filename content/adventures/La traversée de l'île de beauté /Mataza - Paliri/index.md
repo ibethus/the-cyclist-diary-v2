@@ -1,7 +1,12 @@
 +++
+speed = "2.9787383"
 title = "Mataza - Paliri"
-date = 2024-09-10 12:40:54.025833
-draft = true
+gps = "GR20_j9.png"
+draft = "true"
+distance = "26922"
+elevation = "2078"
+duration = "9:02:17"
+date = "2024-09-10 12:40:54.025833"
 +++
 ### Maussade 
 La soirée festive d'hier a laissé des traces, nous sommes moins reposés qu'à l'accoutumée. Surtout, la pluie a retardé notre départ d'environ une heure et un épais brouillard recouvre le lande.

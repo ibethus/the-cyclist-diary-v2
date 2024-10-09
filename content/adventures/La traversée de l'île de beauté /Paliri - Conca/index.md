@@ -1,7 +1,12 @@
 +++
+speed = "3.9159856"
 title = "Paliri - Conca"
-date = 2024-09-10 12:43:52.696244
-draft = true
+gps = "GR20_J10.png"
+draft = "true"
+distance = "13657"
+elevation = "499"
+duration = "3:29:15"
+date = "2024-09-10 12:43:52.696244"
 +++
 ### Départ 
 Drôle d'ambiance ce matin au refuge. Nous sommes nombreux à terminer l'aventure GR20 aujourd'hui et il flotte à l'aire de bivouac une atmosphère décontractée et sereine. D'autant que la journée s'annonce belle. Le soleil se lève paresseusement sur l'île de Montecristo, au nord-est de la Corse et nous nous offrons le luxe de quelques minutes de silence devant la multitude de variations orangées que prend le ciel. 

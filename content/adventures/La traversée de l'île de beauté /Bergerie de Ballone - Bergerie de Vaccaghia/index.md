@@ -1,7 +1,12 @@
 +++
+speed = "2.951646"
 title = "Bergerie de Ballone - Bergerie de Vaccaghia"
-date = 2024-09-10 10:37:59.936407
-draft = true
+gps = "GR20_j4.png"
+draft = "true"
+distance = "30206"
+elevation = "1728"
+duration = "10:14:01"
+date = "2024-09-10 10:37:59.936407"
 +++
 ### Long way home
 La condensation a trempé notre tente cette nuit et le réveil n'est pas très agréable ce matin (après 9h de sommeil tout de même). Nous mettons plus de temps à nous préparer qu'à l'accoutumée car nous devons veiller à ne pas tremper nos affaires au moindre mouvement. 

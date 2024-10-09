@@ -1,7 +1,12 @@
 +++
+speed = "1.4286805"
 title = "Asco - Bergerie de Ballone"
-date = 2024-09-10 10:34:54.702222
-draft = true
+gps = "GR20_j3.png"
+draft = "true"
+distance = "11435"
+elevation = "1463"
+duration = "8:00:14"
+date = "2024-09-10 10:34:54.702222"
 +++
 ### Sur la pierre
 On ne s'habitue pas facilement aux départs à 5h du matin. Le dortoir où nous avons dormi a été relativement bruyant et nous n'avons pas dormi autant que nous le voulions. Nous nous mettons en route dans la forêt, avant de rapidement rejoindre une rivière que nous traversons. 

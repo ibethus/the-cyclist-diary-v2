@@ -1,7 +1,12 @@
 +++
+speed = "1.9628048"
 title = "Bergerie de Vaccaghia - Pietra Piana"
-date = 2024-09-05 12:39:00
-draft = true
+gps = "GR20_j5.png"
+draft = "true"
+distance = "12231"
+elevation = "1343"
+duration = "6:13:53"
+date = "2024-09-05 12:39:00"
 +++
 ### Terreurs Nocturnes
 Nous sommes couchés à 19h comme à notre habitude, pour profiter d'un soleil que nous espérons réparateur. Malheureusement, l'orage que nous fuyions depuis trois jours a finalement décidé de se manifester cette nuit.
