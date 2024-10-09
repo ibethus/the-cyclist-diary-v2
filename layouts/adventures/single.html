@@ -16,7 +16,8 @@
                         Distance
                     </p>
                     <p class="title">
-                        {{ .Params.distance }} km
+                        {{ $fmt := div (float .Params.distance) 1000 }}
+                        {{ printf "%.2f" $fmt }} km
                     </p>
                 </div>
                 <div>
@@ -24,7 +25,7 @@
                         Durée
                     </p>
                     <p class="title">
-                        {{ .Params.duree }} h
+                        {{ .Params.duration }} h
                     </p>
                 </div>
                 <div>

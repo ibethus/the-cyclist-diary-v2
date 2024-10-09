@@ -1,4 +1,4 @@
-name: IMage from GPX generator
+name: Image from GPX generator
 run-name: ${{ github.actor }} started map image generation 🚀
 on: [push]
 jobs:
@@ -7,7 +7,7 @@ jobs:
     permissions: write-all
     steps:
       - name: Generate images
-        uses: the-cyclist-diary/generate-map-cicd@v1.2.2
+        uses: the-cyclist-diary/generate-map-cicd@v1.3.0
         with:
           content-path: "content"
           user-token: ${{ secrets.GITHUB_TOKEN }}
