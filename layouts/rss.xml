@@ -64,7 +64,12 @@
 				<images>
 					{{- range .Resources.ByType "image" }}
 						<image>		
-							{{ .RelPermalink }}
+							{{- if hugo.IsProduction -}}
+								{{- $cdnBaseURL := site.Params.imagesCDN -}}
+								{{- printf "%s%s" $cdnBaseURL .RelPermalink -}}
+							{{- else }}
+								{{ .RelPermalink }}
+							{{- end }}
 						</image>
 					{{- end }}	
 				</images>
