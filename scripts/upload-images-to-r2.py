@@ -38,8 +38,8 @@ def count_webp_files() -> int:
 
 
 def count_ig_jpg_files() -> int:
-    """Compte le nombre de variantes JPEG Instagram (générées par Hugo, motif *_hu*.jpg)"""
-    return len(list(PUBLIC_DIR.rglob("*_hu*.jpg")))
+    """Compte le nombre de fichiers JPEG (images sources, publiées telles quelles par Hugo)"""
+    return len(list(PUBLIC_DIR.rglob("*.jpg")))
 
 
 def sync_to_r2(delete_orphans: bool = True) -> bool:
@@ -93,14 +93,13 @@ def sync_to_r2(delete_orphans: bool = True) -> bool:
 
 def sync_ig_jpg_to_r2(delete_orphans: bool = True) -> bool:
     """
-    Synchronise les variantes JPEG dédiées à Instagram vers R2.
+    Synchronise les images JPEG (sources) dédiées à Instagram vers R2.
 
-    Ces fichiers sont générés par le shortcode img.html (Resize "1080x jpg")
-    uniquement pour le job d'auto-publication Instagram (l'API Graph exige du
-    JPEG, incompatible avec le pipeline WebP habituel). Hugo nomme ses
-    ressources d'image générées avec un suffixe "_hu<hash>", ce qui les
-    distingue sans ambiguïté des fichiers jpg/png sources bruts (non traités)
-    présents dans public/, qui eux ne doivent jamais être synchronisés sur R2.
+    Le site n'utilise désormais que des images sources au format JPEG
+    (l'API Graph d'Instagram exige du JPEG, incompatible avec le pipeline
+    WebP habituel). Hugo publie les ressources de bundle de page telles
+    quelles dans public/, sans transformation ni suffixe de hash : on
+    synchronise donc directement tous les *.jpg présents.
 
     Args:
         delete_orphans: Si True, supprime les fichiers sur R2 qui n'existent plus localement
@@ -119,7 +118,7 @@ def sync_ig_jpg_to_r2(delete_orphans: bool = True) -> bool:
         '--content-type', 'image/jpeg',
         '--cache-control', 'public, max-age=31536000, immutable',
         '--exclude', '*',
-        '--include', '*_hu*.jpg',
+        '--include', '*.jpg',
         '--size-only',  # Compare par taille (plus rapide que checksum)
     ]
 
