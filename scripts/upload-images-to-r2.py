@@ -37,6 +37,11 @@ def count_webp_files() -> int:
     return len(list(PUBLIC_DIR.rglob("*.webp")))
 
 
+def count_ig_jpg_files() -> int:
+    """Compte le nombre de variantes JPEG Instagram (générées par Hugo, motif *_hu*.jpg)"""
+    return len(list(PUBLIC_DIR.rglob("*_hu*.jpg")))
+
+
 def sync_to_r2(delete_orphans: bool = True) -> bool:
     """
     Synchronise les images WebP vers R2 en utilisant aws s3 sync
@@ -83,6 +88,60 @@ def sync_to_r2(delete_orphans: bool = True) -> bool:
     
     except subprocess.CalledProcessError as e:
         print(f"\n❌ Erreur lors de la synchronisation: {e}")
+        return False
+
+
+def sync_ig_jpg_to_r2(delete_orphans: bool = True) -> bool:
+    """
+    Synchronise les variantes JPEG dédiées à Instagram vers R2.
+
+    Ces fichiers sont générés par le shortcode img.html (Resize "1080x jpg")
+    uniquement pour le job d'auto-publication Instagram (l'API Graph exige du
+    JPEG, incompatible avec le pipeline WebP habituel). Hugo nomme ses
+    ressources d'image générées avec un suffixe "_hu<hash>", ce qui les
+    distingue sans ambiguïté des fichiers jpg/png sources bruts (non traités)
+    présents dans public/, qui eux ne doivent jamais être synchronisés sur R2.
+
+    Args:
+        delete_orphans: Si True, supprime les fichiers sur R2 qui n'existent plus localement
+
+    Returns:
+        True si succès, False sinon
+    """
+    print(f"\n🔄 Synchronisation des JPEG Instagram vers R2 (bucket: {R2_BUCKET})...")
+    print("-" * 60)
+
+    cmd = [
+        'aws', 's3', 'sync',
+        str(PUBLIC_DIR),
+        f's3://{R2_BUCKET}/',
+        '--endpoint-url', R2_ENDPOINT,
+        '--content-type', 'image/jpeg',
+        '--cache-control', 'public, max-age=31536000, immutable',
+        '--exclude', '*',
+        '--include', '*_hu*.jpg',
+        '--size-only',  # Compare par taille (plus rapide que checksum)
+    ]
+
+    if delete_orphans:
+        cmd.append('--delete')
+        print("🗑️  Mode: synchronisation avec suppression des fichiers orphelins")
+    else:
+        print("📤 Mode: upload uniquement (pas de suppression)")
+
+    print()
+
+    try:
+        result = subprocess.run(
+            cmd,
+            check=True,
+            text=True,
+            capture_output=False
+        )
+        return True
+
+    except subprocess.CalledProcessError as e:
+        print(f"\n❌ Erreur lors de la synchronisation des JPEG Instagram: {e}")
         return False
 
 
@@ -142,10 +201,18 @@ def main():
     # Compte les fichiers locaux
     local_count = count_webp_files()
     print(f"📊 {local_count} fichiers WebP trouvés localement")
+    ig_jpg_count = count_ig_jpg_files()
+    print(f"📊 {ig_jpg_count} fichiers JPEG Instagram trouvés localement")
     
     # Synchronise vers R2 avec suppression des orphelins
     success = sync_to_r2(delete_orphans=True)
     
+    if not success:
+        sys.exit(1)
+
+    # Synchronise les variantes JPEG dédiées à Instagram
+    success = sync_ig_jpg_to_r2(delete_orphans=True)
+
     if not success:
         sys.exit(1)
     
