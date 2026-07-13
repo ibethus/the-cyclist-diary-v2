@@ -51,13 +51,16 @@ Puis sourcez-le : `source .env`
 ### Build en production
 
 Le workflow GitHub Actions s'occupe automatiquement de :
-1. Builder le site avec Hugo
-2. Installer les dépendances Python (avec cache pour optimiser les builds)
-3. Synchroniser les images WebP vers R2 (upload parallélisé + suppression des orphelines)
-4. Supprimer les images WebP de l'artifact
-5. Déployer sur GitHub Pages
+1. Installer les dépendances Python (avec cache pour optimiser les builds)
+2. Générer les images Instagram (`instagram.jpeg`, portrait 3:4) via `scripts/generate-instagram-images.py`
+3. Builder le site avec Hugo
+4. Synchroniser les images WebP **et les `instagram.jpeg`** vers R2 (upload parallélisé + suppression des orphelines)
+5. Supprimer les images WebP/JPEG de l'artifact
+6. Déployer sur GitHub Pages
 
-**Note** : Les dépendances Python (awscli) sont mises en cache via `actions/setup-python@v5` pour accélérer les builds successifs.
+**Images Instagram** : Avant le build Hugo, un script génère pour chaque article de blog et chaque étape d'aventure une image `instagram.jpeg` au format portrait 3:4, à partir de sa couverture `index.jpg`/`index.jpeg`. Le nom de l'aventure est ajouté en haut (pour les étapes) et le titre de l'article en bas, avec la charte graphique du blog. Si un bundle n'a pas de couverture, une image du dossier est copiée en `index.jpg`. Ces `instagram.jpeg` servent d'image `<enclosure>` dans le flux RSS et sont servies depuis le CDN R2. Elles sont ignorées par git (régénérées à chaque build).
+
+**Note** : Les dépendances Python (awscli, Pillow) sont mises en cache via `actions/setup-python@v5` pour accélérer les builds successifs.
 **Performance** : L'utilisation de `aws s3 sync` permet des uploads parallélisés 10-50x plus rapides qu'une copie séquentielle.
 
 ### Upload manuel des images

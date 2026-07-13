@@ -31,7 +31,7 @@
 	{{- $pages = $pages | first $limit }}
 {{- end }}
 {{- printf "<?xml version=\"1.0\" encoding=\"utf-8\" standalone=\"yes\"?>" | safeHTML }}
-<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:media="http://search.yahoo.com/mrss/">
 	<channel>
 		<title>{{ if eq .Title .Site.Title }}{{ .Site.Title }}{{ else }}{{ with .Title }}{{ . }} on {{ end }}{{ .Site.Title }}{{ end }}</title>
 		<link>{{ .Permalink }}</link>
@@ -68,13 +68,28 @@
 				{{- range $categories }}
 					<category>{{ . | transform.XMLEscape | safeHTML }}</category>
 				{{- end }}
-				{{- with .Resources.ByType "image" | first 1 }}
-					{{- range . }}
-						{{- $imageURL := .Permalink }}
+				{{- /* Image dédiée à l'enclosure : la variante Instagram (portrait 3:4)
+				       générée au build. À défaut, on retombe sur la première image. */}}
+				{{- $instagram := .Resources.GetMatch "instagram.{jpeg,jpg}" }}
+				{{- $images := .Resources.ByType "image" }}
+				{{- $enclosure := $instagram }}
+				{{- if not $enclosure }}
+					{{- with $images }}{{ $enclosure = index . 0 }}{{ end }}
+				{{- end }}
+				{{- with $enclosure }}
+					{{- $imageURL := .Permalink }}
+					{{- if hugo.IsProduction }}
+						{{- $imageURL = printf "%s%s" site.Params.imagesCDN .RelPermalink }}
+					{{- end }}
+					{{- printf "<enclosure url=%q length=%q type=%q />" $imageURL (string (len .Content)) .MediaType.Type | safeHTML }}
+				{{- end }}
+				{{- range $img := $images }}
+					{{- if not (strings.HasPrefix $img.Name "instagram") }}
+						{{- $imageURL := $img.Permalink }}
 						{{- if hugo.IsProduction }}
-							{{- $imageURL = printf "%s%s" site.Params.imagesCDN .RelPermalink }}
+							{{- $imageURL = printf "%s%s" site.Params.imagesCDN $img.RelPermalink }}
 						{{- end }}
-						{{- printf "<enclosure url=%q length=%q type=%q />" $imageURL (string (len .Content)) .MediaType.Type | safeHTML }}
+						{{- printf "<media:content url=%q type=%q medium=\"image\" fileSize=%q />" $imageURL $img.MediaType.Type (string (len $img.Content)) | safeHTML }}
 					{{- end }}
 				{{- end }}
 			</item>

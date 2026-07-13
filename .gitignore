@@ -4,3 +4,6 @@ public/*
 resources/*
 .venv
 .env
+
+# Images Instagram générées au build (portrait 3:4), régénérées à chaque build
+content/**/instagram.jpeg

@@ -38,8 +38,8 @@ def count_webp_files() -> int:
 
 
 def count_ig_jpg_files() -> int:
-    """Compte le nombre de fichiers JPEG (images sources, publiées telles quelles par Hugo)"""
-    return len(list(PUBLIC_DIR.rglob("*.jpg")))
+    """Compte le nombre de fichiers JPEG (images sources + variantes instagram.jpeg)"""
+    return len(list(PUBLIC_DIR.rglob("*.jpg"))) + len(list(PUBLIC_DIR.rglob("*.jpeg")))
 
 
 def sync_to_r2(delete_orphans: bool = True) -> bool:
@@ -119,6 +119,7 @@ def sync_ig_jpg_to_r2(delete_orphans: bool = True) -> bool:
         '--cache-control', 'public, max-age=31536000, immutable',
         '--exclude', '*',
         '--include', '*.jpg',
+        '--include', '*.jpeg',  # variantes instagram.jpeg (portrait 3:4)
         '--size-only',  # Compare par taille (plus rapide que checksum)
     ]
 
