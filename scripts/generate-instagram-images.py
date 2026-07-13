@@ -25,6 +25,8 @@ afin que les fichiers ``instagram.jpeg`` soient pris en compte au build.
 """
 from __future__ import annotations
 
+import argparse
+import json
 import random
 import re
 import shutil
@@ -32,7 +34,7 @@ import sys
 import tomllib
 from pathlib import Path
 
-from PIL import Image, ImageDraw, ImageFilter, ImageFont
+from PIL import Image, ImageChops, ImageDraw, ImageEnhance, ImageFilter, ImageFont
 
 # --- Chemins ---------------------------------------------------------------
 ROOT = Path(__file__).resolve().parent.parent
@@ -44,7 +46,7 @@ SECTIONS = ("blog", "adventures")
 
 # --- Format de sortie ------------------------------------------------------
 IG_WIDTH, IG_HEIGHT = 1080, 1440  # portrait 3:4
-JPEG_QUALITY = 88
+JPEG_QUALITY = 100
 OUTPUT_NAME = "instagram.jpeg"
 
 # --- Charte graphique du blog ---------------------------------------------
@@ -71,6 +73,56 @@ TITLE_MIN_SIZE = 34
 SHADOW_OFFSET = 3          # décalage de l'ombre portée (lisibilité)
 SHADOW_BLUR = 6            # flou de l'ombre portée
 SHADOW_ALPHA = 200         # opacité de l'ombre (0-255)
+
+# --- Étalonnage « pellicule » : grain photo + colorimétrie pastel ----------
+# Toutes ces valeurs sont paramétrables pour ajuster le rendu au goût.
+FILM_LOOK_ENABLED = True
+# Saturation : 1.0 = couleurs d'origine, <1 = plus délavé / pastel.
+FILM_SATURATION = 0.75
+# Contraste : <1 = plus doux, aspect mat façon pellicule.
+FILM_CONTRAST = 0.85
+# Luminosité : léger relèvement pour un rendu doux et lumineux.
+FILM_BRIGHTNESS = 1.03
+# Fade / matte : on relève les noirs pour un rendu délavé.
+# 0 = noirs purs, ~15-40 = aspect pastel prononcé.
+FILM_BLACK_LIFT = 20
+# Teinte injectée dans les ombres relevées (crème chaude par défaut).
+FILM_FADE_TINT = (255, 241, 202)
+# Balance colorimétrique par canal (multiplicateurs R, V, B).
+# >1 sur le rouge et <1 sur le bleu = rendu chaud / vintage.
+FILM_COLOR_BALANCE = (1.04, 1.0, 0.96)
+# Grain photo : intensité du bruit gaussien (0 = aucun, ~8-20 = visible).
+FILM_GRAIN_INTENSITY = 4
+# Grain monochrome (True) ou coloré (False, plus « numérique »).
+FILM_GRAIN_MONOCHROME = True
+# Vignetage : assombrissement progressif des bords (aspect argentique).
+FILM_VIGNETTE_ENABLED = True
+# Force du vignetage : 0 = aucun, 1 = bords quasi noirs. ~0.3-0.5 = subtil.
+FILM_VIGNETTE_STRENGTH = 0.30
+# Rayon (0-1) où le vignetage commence : plus grand = zone claire centrale
+# plus large, assombrissement concentré sur les coins.
+FILM_VIGNETTE_RADIUS = 0.70
+
+# --- Statistiques d'étape (distance / dénivelé / durée) --------------------
+# Lues depuis le fichier « *.polyline.json » présent dans le bundle et
+# affichées en bas de l'image, réparties uniformément sur la largeur.
+STATS_ENABLED = True
+# Champs affichés, dans l'ordre (gauche -> droite). Valeurs possibles :
+# "distance", "elevation", "duration".
+STATS_FIELDS = ("distance", "elevation", "duration")
+# Affiche un petit libellé sous chaque valeur.
+STATS_SHOW_LABELS = False
+# Libellés (repris tels quels, en minuscules pour rester cohérent).
+STATS_LABELS = {
+    "distance": "distance",
+    "elevation": "dénivelé",
+    "duration": "durée",
+}
+STATS_VALUE_SIZE = 36       # taille de police des valeurs
+STATS_LABEL_SIZE = 22       # taille de police des libellés
+STATS_LABEL_GAP = 8         # espace vertical valeur <-> libellé
+STATS_BOTTOM_MARGIN = 50    # marge depuis le bas de l'image
+STATS_COLOR = BRAND_CREAM   # couleur du texte des stats
 
 
 def read_front_matter(md_path: Path) -> dict:
@@ -237,7 +289,114 @@ def crop_to_portrait(img: Image.Image) -> Image.Image:
     return img.resize((IG_WIDTH, IG_HEIGHT), Image.LANCZOS)
 
 
-def wrap_text(draw: ImageDraw.ImageDraw, text: str, font: ImageFont.FreeTypeFont, max_width: int) -> list[str]:
+def apply_vignette(img: Image.Image) -> Image.Image:
+    """
+    Assombrit progressivement les bords de l'image (vignetage argentique).
+
+    Un masque radial est calculé : luminosité pleine jusqu'à
+    ``FILM_VIGNETTE_RADIUS`` (fraction de la demi-diagonale), puis décroissance
+    douce vers les coins, l'assombrissement maximal valant
+    ``FILM_VIGNETTE_STRENGTH``.
+    """
+    w, h = img.size
+    cx, cy = w / 2, h / 2
+    max_dist = (cx ** 2 + cy ** 2) ** 0.5
+    inner = FILM_VIGNETTE_RADIUS * max_dist
+
+    # Rampe 1D (par distance) réutilisée via un gradient radial.
+    mask = Image.new("L", (w, h), 0)
+    # On construit le masque avec une ellipse floutée : centre clair (255),
+    # bords sombres (0), puis on l'utilise pour interpoler vers une version
+    # assombrie de l'image.
+    radial = Image.radial_gradient("L").resize((w, h))
+    # radial : 0 au centre -> 255 aux coins. On veut l'inverse pondéré.
+    def _ramp(v: int) -> int:
+        # v = 0 (centre) .. 255 (coin). Distance normalisée.
+        dist = v / 255 * max_dist
+        if dist <= inner:
+            factor = 0.0
+        else:
+            factor = (dist - inner) / (max_dist - inner)
+            factor = min(1.0, factor)
+        # 255 = pleine luminosité, plus bas = plus sombre.
+        return int(255 * (1 - FILM_VIGNETTE_STRENGTH * factor))
+
+    mask = radial.point(_ramp)
+    dark = ImageEnhance.Brightness(img).enhance(1 - FILM_VIGNETTE_STRENGTH)
+    return Image.composite(img, dark, mask)
+
+
+def apply_film_look(img: Image.Image) -> Image.Image:
+    """
+    Applique un rendu « pellicule » : colorimétrie pastel (désaturation,
+    contraste doux, teinte chaude, noirs relevés/matte) puis grain photo.
+
+    Le traitement s'applique sur la photo AVANT la gravure du titre, afin que
+    le texte reste net et propre par-dessus le grain. Tout est paramétrable
+    via les constantes ``FILM_*``.
+    """
+    if not FILM_LOOK_ENABLED:
+        return img.convert("RGB")
+
+    img = img.convert("RGB")
+
+    # 1. Désaturation légère -> aspect pastel / délavé.
+    img = ImageEnhance.Color(img).enhance(FILM_SATURATION)
+    # 2. Contraste plus doux -> rendu mat façon film.
+    img = ImageEnhance.Contrast(img).enhance(FILM_CONTRAST)
+    # 3. Léger relèvement de luminosité.
+    img = ImageEnhance.Brightness(img).enhance(FILM_BRIGHTNESS)
+
+    # 4. Balance colorimétrique par canal (teinte chaude / vintage).
+    br, bg, bb = FILM_COLOR_BALANCE
+    r, g, b = img.split()
+    r = r.point(lambda v, m=br: min(255, int(v * m)))
+    g = g.point(lambda v, m=bg: min(255, int(v * m)))
+    b = b.point(lambda v, m=bb: min(255, int(v * m)))
+    img = Image.merge("RGB", (r, g, b))
+
+    # 5. Fade / matte : on remappe [0,255] -> [lift, 255] par canal, avec une
+    #    teinte crème dans les noirs pour l'aspect pastel.
+    if FILM_BLACK_LIFT > 0:
+        tr, tg, tb = FILM_FADE_TINT
+        lifts = (
+            FILM_BLACK_LIFT * tr / 255,
+            FILM_BLACK_LIFT * tg / 255,
+            FILM_BLACK_LIFT * tb / 255,
+        )
+        channels = img.split()
+        remapped = [
+            ch.point(lambda v, lo=lift: int(lo + v * (255 - lo) / 255))
+            for ch, lift in zip(channels, lifts)
+        ]
+        img = Image.merge("RGB", remapped)
+
+    # 6. Vignetage : assombrissement progressif des bords.
+    if FILM_VIGNETTE_ENABLED and FILM_VIGNETTE_STRENGTH > 0:
+        img = apply_vignette(img)
+
+    # 7. Grain photo : bruit gaussien additionné (centré sur 128).
+    if FILM_GRAIN_INTENSITY > 0:
+        if FILM_GRAIN_MONOCHROME:
+            noise = Image.effect_noise(img.size, FILM_GRAIN_INTENSITY)
+            noise = Image.merge("RGB", (noise, noise, noise))
+        else:
+            noise = Image.merge(
+                "RGB",
+                tuple(
+                    Image.effect_noise(img.size, FILM_GRAIN_INTENSITY)
+                    for _ in range(3)
+                ),
+            )
+        # out = img + (noise - 128) -> grain signé ±intensité.
+        img = ImageChops.add(img, noise, scale=1.0, offset=-128)
+
+    return img
+
+
+def wrap_text(
+    draw: ImageDraw.ImageDraw, text: str, font: ImageFont.FreeTypeFont, max_width: int
+) -> list[str]:
     """Découpe le texte en lignes tenant dans ``max_width``."""
     lines: list[str] = []
     for paragraph in text.splitlines() or [text]:
@@ -331,6 +490,121 @@ def draw_centered_title(base: Image.Image, text: str) -> None:
 
 
 
+def read_stats(bundle: Path) -> dict | None:
+    """
+    Lit les statistiques d'étape depuis le fichier ``*.polyline.json`` du
+    bundle (distance, dénivelé, durée). Retourne ``None`` si absent/illisible.
+    """
+    candidates = sorted(bundle.glob("*.polyline.json"))
+    if not candidates:
+        return None
+    try:
+        data = json.loads(candidates[0].read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    meta = data.get("metadata")
+    return meta if isinstance(meta, dict) else None
+
+
+def fmt_distance(km: float) -> str:
+    """Ex. 25.657 -> « 25.7 km », 455.107 -> « 455 km »."""
+    return f"{km:.0f} km" if km >= 100 else f"{km:.1f} km"
+
+
+def fmt_elevation(gain_m: float) -> str:
+    """Dénivelé positif, ex. 652.2 -> « +652 m »."""
+    return f"+{round(gain_m)} m"
+
+
+def fmt_duration(seconds: float) -> str:
+    """Ex. 41651 -> « 11h34 », 2100 -> « 35 min »."""
+    seconds = int(seconds)
+    hours, remainder = divmod(seconds, 3600)
+    minutes = remainder // 60
+    return f"{hours}h{minutes:02d}" if hours else f"{minutes} min"
+
+
+def stat_value(field: str, meta: dict) -> str | None:
+    """Retourne la valeur formatée d'un champ de stats, ou ``None``."""
+    if field == "distance" and meta.get("distanceKm") is not None:
+        return fmt_distance(meta["distanceKm"])
+    if field == "elevation" and meta.get("elevationGainM") is not None:
+        return fmt_elevation(meta["elevationGainM"])
+    if field == "duration" and meta.get("durationSeconds") is not None:
+        return fmt_duration(meta["durationSeconds"])
+    return None
+
+
+def draw_stats(base: Image.Image, meta: dict) -> None:
+    """
+    Grave les statistiques en bas de l'image, réparties uniformément sur la
+    largeur (une colonne centrée par champ), valeur au-dessus d'un libellé
+    optionnel. Une ombre portée douce garantit la lisibilité.
+    """
+    columns: list[tuple[str, str | None]] = []
+    for field in STATS_FIELDS:
+        value = stat_value(field, meta)
+        if value is not None:
+            label = STATS_LABELS.get(field) if STATS_SHOW_LABELS else None
+            columns.append((value, label))
+    if not columns:
+        return
+
+    value_font = ImageFont.truetype(str(FONT_PATH), STATS_VALUE_SIZE)
+    label_font = ImageFont.truetype(str(FONT_PATH), STATS_LABEL_SIZE)
+
+    v_ascent, v_descent = value_font.getmetrics()
+    value_h = v_ascent + v_descent
+    label_h = sum(label_font.getmetrics()) if STATS_SHOW_LABELS else 0
+    block_h = value_h + (STATS_LABEL_GAP + label_h if STATS_SHOW_LABELS else 0)
+    top = IG_HEIGHT - STATS_BOTTOM_MARGIN - block_h
+
+    col_width = IG_WIDTH / len(columns)
+
+    # Calque d'ombre portée.
+    shadow = Image.new("RGBA", base.size, (0, 0, 0, 0))
+    shadow_draw = ImageDraw.Draw(shadow)
+    draw = ImageDraw.Draw(base)
+
+    for i, (value, label) in enumerate(columns):
+        center_x = col_width * (i + 0.5)
+        # Valeur.
+        vw = draw.textlength(value, font=value_font)
+        vx = center_x - vw / 2
+        shadow_draw.text(
+            (vx + SHADOW_OFFSET, top + SHADOW_OFFSET),
+            value, font=value_font, fill=(0, 0, 0, SHADOW_ALPHA),
+        )
+        # Libellé.
+        if label:
+            lw = draw.textlength(label, font=label_font)
+            lx = center_x - lw / 2
+            ly = top + value_h + STATS_LABEL_GAP
+            shadow_draw.text(
+                (lx + SHADOW_OFFSET, ly + SHADOW_OFFSET),
+                label, font=label_font, fill=(0, 0, 0, SHADOW_ALPHA),
+            )
+
+    shadow = shadow.filter(ImageFilter.GaussianBlur(SHADOW_BLUR))
+    base.alpha_composite(shadow)
+
+    draw = ImageDraw.Draw(base)
+    for i, (value, label) in enumerate(columns):
+        center_x = col_width * (i + 0.5)
+        vw = draw.textlength(value, font=value_font)
+        draw.text(
+            (center_x - vw / 2, top),
+            value, font=value_font, fill=(*STATS_COLOR, 255),
+        )
+        if label:
+            lw = draw.textlength(label, font=label_font)
+            ly = top + value_h + STATS_LABEL_GAP
+            draw.text(
+                (center_x - lw / 2, ly),
+                label, font=label_font, fill=(*STATS_COLOR, 255),
+            )
+
+
 def generate_for_bundle(bundle: Path) -> bool:
     """Génère ``instagram.jpeg`` pour un bundle. Retourne True si succès."""
     title = get_title(bundle)
@@ -345,12 +619,17 @@ def generate_for_bundle(bundle: Path) -> bool:
 
     try:
         with Image.open(cover) as src:
-            canvas = crop_to_portrait(src).convert("RGBA")
+            canvas = apply_film_look(crop_to_portrait(src)).convert("RGBA")
     except OSError as exc:
         print(f"   ⚠️  Image illisible ({cover.name}) : {exc}")
         return "failed"
 
     draw_centered_title(canvas, title)
+
+    if STATS_ENABLED:
+        meta = read_stats(bundle)
+        if meta:
+            draw_stats(canvas, meta)
 
     out_path = bundle / OUTPUT_NAME
     canvas.convert("RGB").save(out_path, "JPEG", quality=JPEG_QUALITY, optimize=True)
@@ -360,6 +639,19 @@ def generate_for_bundle(bundle: Path) -> bool:
 
 
 def main() -> None:
+    parser = argparse.ArgumentParser(
+        description="Génère les images Instagram (portrait 3:4) des articles."
+    )
+    parser.add_argument(
+        "-o", "--only",
+        metavar="MOTIF",
+        help=(
+            "Ne (re)génère que les bundles dont le chemin (relatif à content/) "
+            "contient ce motif, insensible à la casse. Ex. : --only \"Nordkapp\"."
+        ),
+    )
+    args = parser.parse_args()
+
     print("🎨 Génération des images Instagram (portrait 3:4)")
     print("=" * 60)
 
@@ -371,6 +663,15 @@ def main() -> None:
         sys.exit(1)
 
     bundles = find_leaf_bundles()
+    if args.only:
+        needle = args.only.lower()
+        bundles = [
+            b for b in bundles
+            if needle in str(b.relative_to(CONTENT_DIR)).lower()
+        ]
+        if not bundles:
+            print(f"❌ Aucun bundle ne correspond au motif : « {args.only} »")
+            sys.exit(1)
     print(f"📦 {len(bundles)} article(s) / étape(s) détecté(s)\n")
 
     generated = 0
