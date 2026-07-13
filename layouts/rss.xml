@@ -61,6 +61,13 @@
 				{{- with $authorEmail }}<author>{{ . }}{{ with $authorName }} ({{ . }}){{ end }}</author>{{ end }}
 				<guid>{{ .Permalink }}</guid>
 				<description>{{ .Summary | transform.XMLEscape | safeHTML }}</description>
+				{{- $categories := .Params.categories }}
+				{{- if not $categories }}
+					{{- with .Parent }}{{ $categories = .Params.categories }}{{ end }}
+				{{- end }}
+				{{- range $categories }}
+					<category>{{ . | transform.XMLEscape | safeHTML }}</category>
+				{{- end }}
 				{{- with .Resources.ByType "image" | first 1 }}
 					{{- range . }}
 						{{- $imageURL := .Permalink }}
