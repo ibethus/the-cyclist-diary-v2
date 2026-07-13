@@ -61,18 +61,15 @@
 				{{- with $authorEmail }}<author>{{ . }}{{ with $authorName }} ({{ . }}){{ end }}</author>{{ end }}
 				<guid>{{ .Permalink }}</guid>
 				<description>{{ .Summary | transform.XMLEscape | safeHTML }}</description>
-				<images>
-					{{- range .Resources.ByType "image" }}
-						<image>		
-							{{- if hugo.IsProduction -}}
-								{{- $cdnBaseURL := site.Params.imagesCDN -}}
-								{{- printf "%s%s" $cdnBaseURL .RelPermalink -}}
-							{{- else }}
-								{{ .RelPermalink }}
-							{{- end }}
-						</image>
-					{{- end }}	
-				</images>
+				{{- with .Resources.ByType "image" | first 1 }}
+					{{- range . }}
+						{{- $imageURL := .Permalink }}
+						{{- if hugo.IsProduction }}
+							{{- $imageURL = printf "%s%s" site.Params.imagesCDN .RelPermalink }}
+						{{- end }}
+						{{- printf "<enclosure url=%q length=%q type=%q />" $imageURL (string (len .Content)) .MediaType.Type | safeHTML }}
+					{{- end }}
+				{{- end }}
 			</item>
 		{{- end }}
 	</channel>
