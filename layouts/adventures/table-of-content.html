@@ -14,7 +14,9 @@
             {{ range $item := $pager.Pages }}
             <div class="column is-one-third">
                 <div class="card">
+                    {{ $itemImages := $item.Resources.ByType "image" }}
                     {{ $itemCover := $item.Resources.GetMatch "index.{jpg,png,webp}" }}
+                    {{ $itemCover = or $itemCover (and $itemImages (index (first 1 $itemImages) 0)) }}
                     {{ with $itemCover }}
                     <div class="card-image">
                         <figure class="image is-4by3">
