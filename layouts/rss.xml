@@ -84,7 +84,7 @@
 					{{- printf "<enclosure url=%q length=%q type=%q />" $imageURL (string (len .Content)) .MediaType.Type | safeHTML }}
 				{{- end }}
 				{{- range $img := $images }}
-					{{- if not (strings.HasPrefix $img.Name "instagram") }}
+					{{- if and (not (strings.HasPrefix $img.Name "instagram")) (not (strings.HasPrefix $img.Name "index.")) }}
 						{{- $imageURL := $img.Permalink }}
 						{{- if hugo.IsProduction }}
 							{{- $imageURL = printf "%s%s" site.Params.imagesCDN $img.RelPermalink }}
