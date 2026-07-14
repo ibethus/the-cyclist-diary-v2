@@ -66,9 +66,6 @@ jobs:
       - name: Install Python dependencies
         run: pip install -r scripts/requirements.txt
 
-      - name: Generate Instagram images
-        run: python3 scripts/generate-instagram-images.py
-
       - name: Build
         run: hugo --minify --baseURL "${{ steps.pages.outputs.base_url }}/"
 
