@@ -7,7 +7,7 @@ categories = ["rando", "espagne", "picos de europa"]
 cover = "index.png"
 +++
 
-Après avoir réalisé au mois de juin une version personnalisée de l'Anillo de Picos (AP) dans le parc des _Picos de Europa_, j'ai eu l'envie de partager cet itinéraire sur sept jours qui m'a semblé intéressant, notamment parce qu'il permet de voir quasiment la totalité du parc. Alors si comme moi vous n'avez qu'une semaine devant vous, c'est peut-être une option intéressante ! 
+Après avoir réalisé au mois de juin une version personnalisée de l'Anillo de Picos (AP) dans le parc des _Picos de Europa_, j'ai eu l'envie de partager cet itinéraire sur sept jours, notamment parce qu'il permet de voir quasiment la totalité du parc. Alors si comme moi vous n'avez qu'une semaine devant vous, c'est peut-être une option intéressante ! 
 Je vous listerai également toutes mes astuces pour ce très beau trek.
 
 > NB. Les traces gps sont celles que j'ai enregistrées avec ma montre, à l'exception de la section de Bulnes.
