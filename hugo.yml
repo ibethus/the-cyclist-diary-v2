@@ -69,6 +69,8 @@ markup:
     endLevel: 3
     ordered: true
   goldmark:
+    renderer:
+      unsafe: true
     parser:
       attribute:
         title: true
