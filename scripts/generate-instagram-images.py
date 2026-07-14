@@ -92,16 +92,16 @@ FILM_FADE_TINT = (255, 241, 202)
 # >1 sur le rouge et <1 sur le bleu = rendu chaud / vintage.
 FILM_COLOR_BALANCE = (1.04, 1.0, 0.96)
 # Grain photo : intensité du bruit gaussien (0 = aucun, ~8-20 = visible).
-FILM_GRAIN_INTENSITY = 4
+FILM_GRAIN_INTENSITY = 2
 # Grain monochrome (True) ou coloré (False, plus « numérique »).
 FILM_GRAIN_MONOCHROME = True
 # Vignetage : assombrissement progressif des bords (aspect argentique).
 FILM_VIGNETTE_ENABLED = True
 # Force du vignetage : 0 = aucun, 1 = bords quasi noirs. ~0.3-0.5 = subtil.
-FILM_VIGNETTE_STRENGTH = 0.30
+FILM_VIGNETTE_STRENGTH = 0.5
 # Rayon (0-1) où le vignetage commence : plus grand = zone claire centrale
 # plus large, assombrissement concentré sur les coins.
-FILM_VIGNETTE_RADIUS = 0.70
+FILM_VIGNETTE_RADIUS = 0.60
 
 # --- Statistiques d'étape (distance / dénivelé / durée) --------------------
 # Lues depuis le fichier « *.polyline.json » présent dans le bundle et
